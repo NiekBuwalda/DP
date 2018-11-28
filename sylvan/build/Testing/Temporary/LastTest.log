@@ -1,0 +1,33 @@
+Start testing: Sep 07 14:55 CEST
+----------------------------------------------------------
+1/2 Testing: test_cxx
+1/2 Test: test_cxx
+Command: "/vol/home/s1560700/Documents/Master/jaar 2/final_vec/sylvan-master/build/test/test_cxx"
+Directory: /vol/home/s1560700/Documents/Master/jaar 2/final_vec/sylvan-master/build/test
+"test_cxx" start time: Sep 07 14:55 CEST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.55 sec
+----------------------------------------------------------
+Test Passed.
+"test_cxx" end time: Sep 07 14:55 CEST
+"test_cxx" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/2 Testing: test_basic
+2/2 Test: test_basic
+Command: "/vol/home/s1560700/Documents/Master/jaar 2/final_vec/sylvan-master/build/test/test_basic"
+Directory: /vol/home/s1560700/Documents/Master/jaar 2/final_vec/sylvan-master/build/test
+"test_basic" start time: Sep 07 14:55 CEST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.83 sec
+----------------------------------------------------------
+Test Passed.
+"test_basic" end time: Sep 07 14:55 CEST
+"test_basic" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Sep 07 14:55 CEST

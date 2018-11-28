@@ -1,0 +1,1 @@
+/usr/bin/c++   -O2 -Wextra -Wall -Werror -fno-strict-aliasing -Wno-deprecated  -O3 -DNDEBUG   CMakeFiles/test_cxx.dir/test_cxx.cpp.o  -o test_cxx -rdynamic ../src/libsylvan.so -lstdc++ -lm -lpthread -lgmp -lrt -Wl,-rpath,"/vol/home/s1560700/Documents/Master/jaar 2/final_vec/sylvan-master/build/src" 
