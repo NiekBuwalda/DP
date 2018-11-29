@@ -99,11 +99,12 @@ bool exQuant(vector<vector<vector<Lit>>> &bucketsUnsigned, vector<vector<vector<
               
 		for (unsigned i = 0; i < pos.size(); ++i){
 			vector<Lit> resUnsigned = pos.at(i);
-			if (resUnsigned.empty()) return false;
+			//if (resUnsigned.empty()) return false;
 			int nextIndexPos = numVars;
 			bool nextSignPos = false;
 			for (size_t j=0; j < resUnsigned.size(); ++j ){
 				Lit *lit = &resUnsigned.at(j);
+				cout<< lit->var << lit->sign << endl;
 				if(lit->var == index+1){
 					resUnsigned.erase(resUnsigned.begin()+j);
 				}
@@ -117,9 +118,12 @@ bool exQuant(vector<vector<vector<Lit>>> &bucketsUnsigned, vector<vector<vector<
 					}
 				}
 			}
+			if (resUnsigned.empty()) return false;
 			for(unsigned k = 0; k < neg.size(); ++k ){
 				vector<Lit> resSigned = neg.at(k);
-				if (resUnsigned.empty()) return false;
+				cout<< "check1" <<endl;
+				//if (resSigned.empty()) return false;
+				cout<< "check2" <<endl;
 				int nextIndexNeg = numVars;
 				bool nextSignNeg = false;
 				for (size_t l = 0; l < resSigned.size(); ++l){
@@ -137,8 +141,9 @@ bool exQuant(vector<vector<vector<Lit>>> &bucketsUnsigned, vector<vector<vector<
 						}
 					}
 				}
+				if (resSigned.empty()) return false;
 
-                            //combine two clauses
+        //combine two clauses
 				vector<Lit> res = resUnsigned;
 				res.insert( res.end(), resSigned.begin(), resSigned.end() );
 				//cout << "resSize: " << res.size() << endl;
