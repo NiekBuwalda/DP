@@ -1,1 +1,0 @@
-/usr/bin/cc  -O2 -Wextra -Wall -Werror -fno-strict-aliasing  -O3 -DNDEBUG   CMakeFiles/test_basic.dir/test_basic.c.o  -o test_basic -rdynamic ../src/libsylvan.so -lm -lpthread -lgmp -lrt -Wl,-rpath,"/vol/home/s1560700/Documents/Master/jaar 2/final_vec/sylvan-master/build/src" 

@@ -1,1 +1,0 @@
-/usr/bin/c++   -O2 -Wextra -Wall -Werror -fno-strict-aliasing -Wno-deprecated  -g   CMakeFiles/test_cxx.dir/test_cxx.cpp.o  -o test_cxx  -L/vol/home/s1560700/Documents/Master/jaar2/final_vec/piSat/sylvan/src -rdynamic ../src/libsylvan.so -lstdc++ -lm -lpthread -lgmp -lrt -Wl,-rpath,/vol/home/s1560700/Documents/Master/jaar2/final_vec/piSat/sylvan/src 
