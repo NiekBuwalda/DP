@@ -31,7 +31,7 @@ using namespace sylvan;
 //bool DPLL(CNF *cnf, size_t depth, Var toAssign, TruthValue valuation);
 //bool DPLL(CNF *cnf);
 
-bool DP(CNF *cnf, vector<Variable> order);
+bool DP(CNF *cnf, vector<Var> &order);
 bool cleanClause(vector<Lit> &clause, vector<Variable> order);
 void createBucketsLit(CNF *cnf, int numVars, vector<Variable> order, vector<vector<vector<Lit>>> &bucketsUnsigned, vector<vector<vector<Lit>>> &bucketsSigned);
 //void createBucketsUnsigned(CNF *cnf, int numVars, vector<Variable> order, vector<vector<Clause>> &bucketsUnsigned);

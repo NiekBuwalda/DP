@@ -34,8 +34,8 @@ public:
     ~Clause();
 
     BDD makeBDD();
-    vector<Lit> getVec();
-    bool findBucket2(Var variable, bool &litSign);
+    vector<Lit> &getVec();
+    bool hasVariable(Var variable, bool &litSign);
     bool findBucket(Var variable);
 
     void add(Lit lit) {
@@ -84,6 +84,7 @@ public:
       }
       else return false;  //toevoegen aan unitClause list bij 10/01 ????
 
+      return false;
     }
 
     /**

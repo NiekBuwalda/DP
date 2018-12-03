@@ -20,13 +20,8 @@ using namespace sylvan;
 
 Clause::~Clause() = default;
 
-vector<Lit> Clause::getVec(){
-	vector<Lit> resolvent;
-	for (size_t i = 0; i < literals.size(); i++){
-		Lit *lit = &literals.at(i);
-		resolvent.push_back(*lit);
-	}
-	return resolvent;
+vector<Lit> &Clause::getVec(){
+	return literals;
 }
 
 bool Clause::findBucket(Var variable){
@@ -39,18 +34,15 @@ bool Clause::findBucket(Var variable){
   return false;
 }
 
-bool Clause::findBucket2(Var variable, bool &litSign){
-  for (size_t i = 0; i < literals.size(); i++){
-    Lit *lit = &literals.at(i);
-    if (lit->var == variable){
-    	if(lit->sign){
-    		litSign = true;
-    	}
-    	else litSign = false;
-      return true;
+bool Clause::hasVariable(Var variable, bool &litSign){
+    for (size_t i = 0; i < literals.size(); i++){
+        Lit *lit = &literals.at(i);
+        if (lit->var == variable){
+            litSign = lit->sign;
+            return true;
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 BDD Clause::makeBDD(){
