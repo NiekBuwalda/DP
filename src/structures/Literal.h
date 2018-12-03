@@ -17,6 +17,8 @@ using std::vector;
 
 typedef uint32_t Var;
 
+#define VAR_MAX (UINT32_MAX >> 1)
+
 typedef enum : char {
     False = false,
     True = true,

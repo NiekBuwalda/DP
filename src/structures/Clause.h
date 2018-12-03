@@ -35,7 +35,7 @@ public:
 
     BDD makeBDD();
     vector<Lit> &getVec();
-    bool findBucket2(Var variable, bool &litSign);
+    bool hasVariable(Var variable, bool &litSign);
     bool findBucket(Var variable);
 
     void add(Lit lit) {
