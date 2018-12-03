@@ -20,13 +20,8 @@ using namespace sylvan;
 
 Clause::~Clause() = default;
 
-vector<Lit> Clause::getVec(){
-	vector<Lit> resolvent;
-	for (size_t i = 0; i < literals.size(); i++){
-		Lit *lit = &literals.at(i);
-		resolvent.push_back(*lit);
-	}
-	return resolvent;
+vector<Lit> &Clause::getVec(){
+	return literals;
 }
 
 bool Clause::findBucket(Var variable){
