@@ -29,6 +29,7 @@ void createBucketsLit(CNF *cnf, vector<Var> &order, vector<vector<vector<Lit> *>
         vector<Lit> *literals = &clause->getVec();
         for (Var v = 1; v <= cnf->variables.size(); v++) {
             Var var = order[v];
+            assert (var <= cnf->variables.size());
 
             bool found = clause->hasVariable(var, litSign);
             if (!found) continue;
@@ -59,7 +60,7 @@ bool exQuant(CNF *cnf, vector<vector<vector<Lit> *> *> *buckets, size_t var)
 
             vector<Lit> *resolvent = new vector<Lit>();
             vector<Lit>::iterator p, n;
-            for (p=pos->begin(), n=neg->begin();  p!=pos->end() && n!=neg->end(); ) {
+            for (p=pos->begin(), n=neg->begin();  p != pos->end() && n != neg->end(); ) {
                 vector<Lit>::iterator x = *p < *n ? p : n;
 
                 if (x->var != var) {
@@ -69,18 +70,21 @@ bool exQuant(CNF *cnf, vector<vector<vector<Lit> *> *> *buckets, size_t var)
                 p += x->var == p->var;
                 n += x->var == n->var;
             }
-            if (p == pos->end() || n == neg->end()) {
-                if (p != pos->end()) while (p != pos->end()) resolvent->push_back(*p++);
-                if (n != neg->end()) while (n != neg->end()) resolvent->push_back(*n++);
+
+            if (p != pos->end() && n != neg->end()) {
+                delete resolvent;
+            } else {
+                while (p != pos->end()) resolvent->push_back(*p++);
+                while (n != neg->end()) resolvent->push_back(*n++);
 
                 if (resolvent->empty()) return false;
 
                 Lit min = Lit::Parse(VAR_MAX);
                 for (Lit &l : *resolvent)  min = min < l ? min : l;
 
+                assert (min.var > var);
+
                 buckets[min.sign][min.var]->push_back(resolvent);
-            } else {
-                delete resolvent;
             }
         }
         delete pos;
@@ -98,13 +102,11 @@ bool DP(CNF *cnf, vector<Var> &order){
     bool SAT = true;
 
     size_t numVars = cnf->variables.size();
-    vector<vector<vector<Lit> *> *> bucketsUnsigned(numVars + 1);
-    vector<vector<vector<Lit> *> *> bucketsSigned(numVars + 1);
-    vector<vector<vector<Lit> *> *> buckets[2];
-    buckets[0] = bucketsSigned;
-    buckets[1] = bucketsUnsigned;
+    vector<vector<vector<Lit> *> *> *buckets[2];
+    buckets[0] = new vector<vector<vector<Lit> *> *>(numVars + 1);
+    buckets[1] = new vector<vector<vector<Lit> *> *>(numVars + 1);
 
-    createBucketsLit(cnf, order, buckets);
+    createBucketsLit(cnf, order, *buckets);
 
     /*
     Now existentialy quantificatify the bucketBDDs, in order,
@@ -115,7 +117,7 @@ bool DP(CNF *cnf, vector<Var> &order){
 
         cout << "iteration: " << v << " variable: "<< v << endl;
 
-        SAT = exQuant(cnf, buckets, v);
+        SAT = exQuant(cnf, *buckets, v);
 
         if (!SAT) return false;
     }
