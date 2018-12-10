@@ -20,26 +20,31 @@ extern "C"{
 using namespace std;
 using namespace sylvan;
 
+//static bool comp (int i,int j) { return (i<j); }
+
+
 /**
  * CVreate buckets with clauses renumbered according to the new ordering
  */
 void createBucketsLit(CNF *cnf, vector<Var> &order, vector<vector<vector<Lit> *> *> *buckets) {
 	bool litSign = false;
-	for(Clause *clause : cnf->clauses) {
+    size_t numVars = cnf->variables.size() - 1;
+	for (Clause *clause : cnf->clauses) {
         vector<Lit> *literals = &clause->getVec();
-        for (Var v = 1; v <= cnf->variables.size(); v++) {
+        for (Var v = 1; v <= numVars; v++) {
             Var var = order[v];
-            assert (var <= cnf->variables.size());
+            assert (var <= numVars);
 
             bool found = clause->hasVariable(var, litSign);
             if (!found) continue;
 
-            vector<Lit> *literals2 = new vector<Lit>(literals->size());
+            vector<Lit> *literals2 = new vector<Lit>();
             for (Lit &l : *literals) {
                 Lit x;
                 x.l(order[l.var], l.sign);
                 literals2->push_back(x);
             }
+            std::sort(literals2->begin(), literals2->end());
 
             buckets[litSign][var]->push_back(literals2);
             break;
@@ -48,7 +53,7 @@ void createBucketsLit(CNF *cnf, vector<Var> &order, vector<vector<vector<Lit> *>
     cout << "createBuckets is done" << endl;
 }
 
-bool exQuant(CNF *cnf, vector<vector<vector<Lit> *> *> *buckets, size_t var)
+bool exQuant(vector<vector<vector<Lit> *> *> *buckets, size_t var)
 {
 	cout << "pos size: " << buckets[0][var]->size() << endl;
 	cout << "neg size: " << buckets[1][var]->size() << endl;
@@ -97,27 +102,32 @@ bool exQuant(CNF *cnf, vector<vector<vector<Lit> *> *> *buckets, size_t var)
 	return true;
 }
 
+
 bool DP(CNF *cnf, vector<Var> &order){
+
     //create and fill bucketsBDD
-    bool SAT = true;
-
-    size_t numVars = cnf->variables.size();
-    vector<vector<vector<Lit> *> *> *buckets[2];
-    buckets[0] = new vector<vector<vector<Lit> *> *>(numVars + 1);
-    buckets[1] = new vector<vector<vector<Lit> *> *>(numVars + 1);
-
-    createBucketsLit(cnf, order, *buckets);
+    size_t numVars = cnf->variables.size() - 1;
+    vector<vector<vector<Lit> *> *> buckets[2];
+    buckets[0].resize(numVars + 1);
+    buckets[1].resize(numVars + 1);
+    for (Var v = 1; v <= numVars; v++) {
+        cout << "Mapping var "<< v <<" to "<< order[v] << endl;
+        buckets[0][v] = new vector<vector<Lit> *>();
+        buckets[1][v] = new vector<vector<Lit> *>();
+    }
+    createBucketsLit(cnf, order, buckets);
 
     /*
     Now existentialy quantificatify the bucketBDDs, in order,
     and put resolvent clauses in correct bucket.
     */
 
+    bool SAT = true;
     for (Var v = 1; v <= numVars; v++){
 
         cout << "iteration: " << v << " variable: "<< v << endl;
 
-        SAT = exQuant(cnf, *buckets, v);
+        SAT = exQuant(buckets, v);
 
         if (!SAT) return false;
     }

@@ -20,7 +20,7 @@ int main(int argc, const char *argv[]) {
     cnf->initClauses();
     vector<Var> order(cnf->variables.size() + 1);
     int i = 1;
-    for (vector<Variable *>::iterator v = cnf->variables.begin()++; v != cnf->variables.end(); v++) {
+    for (vector<Variable *>::iterator v = ++cnf->variables.begin(); v != cnf->variables.end(); v++) {
         order[(*v)->var] = i++;
     }
     //cout << "Executing DP" << endl;
