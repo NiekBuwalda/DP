@@ -61,44 +61,59 @@ bool exQuant(vector<vector<vector<Lit> *> *> *buckets, size_t var)
 	//cout << "Non empty bucket var" << order[index].var << endl;
 
     for (vector<Lit> *pos : *buckets[0][var]) {
-        for (vector<Lit> *neg : *buckets[1][var]) {
+    	for (vector<Lit> *neg : *buckets[1][var]) {
+				vector<Lit> *resolvent = new vector<Lit>();
+				vector<Lit>::iterator p, n;
+				for (p=pos->begin(), n=neg->begin();  p != pos->end() && n != neg->end(); ) {
+					vector<Lit>::iterator x = *p < *n ? p : n;
+					//cout << iteration << endl;
+					if (x->var != var) {
+						if (p->var == n->var && p->sign != n->sign) break;
+							resolvent->push_back(*x);
+						}
+						if (p->var == n->var){
+							//cout << "p before; "<< (*p).var << endl;
+							//cout <<"n before: "<< (*n).var << endl;
+							*p++;
+							//cout <<"p after: "<< (*p).var << endl;
+							*n++;
+							//cout <<"n after: "<< (*n).var << endl;
+							//cout << "-----------------------------------------------------"<<endl;
+						}
+						else {
+							//cout << "p before; "<< (*p).var << endl;
+							//cout <<"n before: "<< (*n).var << endl;
+							if (*p < *n) *p++;
+							else *n++;
+							//cout <<"p after: "<< (*p).var << endl;
+							//cout <<"n after: "<< (*n).var << endl;
+							//cout << "-----------------------------------------------------"<<endl;
+						}
+				}
+				//cout << "breaking form for loop" <<endl;
+				if (p != pos->end() && n != neg->end()) {
+					//cout << "resolvent deleted" <<endl;
+					delete resolvent;
+				} else {
+					while (p != pos->end()) resolvent->push_back(*p++);
+					while (n != neg->end()) resolvent->push_back(*n++);
 
-            vector<Lit> *resolvent = new vector<Lit>();
-            vector<Lit>::iterator p, n;
-            for (p=pos->begin(), n=neg->begin();  p != pos->end() && n != neg->end(); ) {
-                vector<Lit>::iterator x = *p < *n ? p : n;
+					if (resolvent->empty()) return false;
 
-                if (x->var != var) {
-                    resolvent->push_back(*x);
-                }
-                if (p->var == n->var && p->sign != n->sign) break;
-                p += x->var == p->var;
-                n += x->var == n->var;
-            }
+					Lit min = Lit::Parse(VAR_MAX);
+					for (Lit &l : *resolvent)  min = min < l ? min : l;
 
-            if (p != pos->end() && n != neg->end()) {
-                delete resolvent;
-            } else {
-                while (p != pos->end()) resolvent->push_back(*p++);
-                while (n != neg->end()) resolvent->push_back(*n++);
+					assert (min.var > var);
 
-                if (resolvent->empty()) return false;
-
-                Lit min = Lit::Parse(VAR_MAX);
-                for (Lit &l : *resolvent)  min = min < l ? min : l;
-
-                assert (min.var > var);
-
-                buckets[min.sign][min.var]->push_back(resolvent);
-            }
-        }
-        delete pos;
+					buckets[min.sign][min.var]->push_back(resolvent);
+				}
+      }
+      delete pos;
     }
 
     for (vector<Lit> *neg : *buckets[1][var]) {
-        delete neg;
+			delete neg;
     }
-
 	return true;
 }
 
