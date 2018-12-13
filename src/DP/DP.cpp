@@ -7,7 +7,6 @@
 #include <typeinfo>
 #include <deque>
 #include <array>
-#include <algorithm>
 extern "C"{
   #include "sylvan.h"
   #include "lace.h"
@@ -20,132 +19,94 @@ extern "C"{
 using namespace std;
 using namespace sylvan;
 
-//static bool comp (int i,int j) { return (i<j); }
+/*
+Put all clauses in correct buckets as BDD
+*/
+void createBuckets(CNF *cnf, int numVars, vector<Variable> order, vector<BDD> &buckets){
+  LACE_ME;
 
+  for (int i = 0; i < numVars; i++) {
+    buckets[i] = sylvan_true;
+    sylvan_protect(&buckets[i]);
+  }
 
-/**
- * CVreate buckets with clauses renumbered according to the new ordering
- */
-void createBucketsLit(CNF *cnf, vector<Var> &order, vector<vector<vector<Lit> *> *> *buckets) {
-	bool litSign = false;
-    size_t numVars = cnf->variables.size() - 1;
-	for (Clause *clause : cnf->clauses) {
-        vector<Lit> *literals = &clause->getVec();
-        for (Var v = 1; v <= numVars; v++) {
-            Var var = order[v];
-            assert (var <= numVars);
+  for(Clause *clause: cnf->clauses){
+    bool found = false;
+    for (int i = 0; i < numVars; i++) {
+      found = clause->findBucket(order[i].var);
+      if (found) {
+        BDD Cx = clause->makeBDD();//create BDD for clause
 
-            bool found = clause->hasVariable(var, litSign);
-            if (!found) continue;
+        mtbdd_refs_pushptr(&Cx);
+        cout << Cx << endl;
+        //volgende regel bevat bus error
+        buckets[i] = sylvan_and(Cx, buckets[i]);
+        cout<<"test 3" << endl;
+        mtbdd_refs_popptr(1);
+        cout<<"test 4" << endl;
+        cout << "bucket " << i << " : "<< buckets[i] << endl;
+        //mtbdd_fprintdot_nc(stdout, buckets[i]);
 
-            vector<Lit> *literals2 = new vector<Lit>();
-            for (Lit &l : *literals) {
-                Lit x;
-                x.l(order[l.var], l.sign);
-                literals2->push_back(x);
-            }
-            std::sort(literals2->begin(), literals2->end());
-
-            buckets[litSign][var]->push_back(literals2);
-            break;
-        }
-    }
-    cout << "createBuckets is done" << endl;
-}
-
-bool exQuant(vector<vector<vector<Lit> *> *> *buckets, size_t var)
-{
-	cout << "pos size: " << buckets[0][var]->size() << endl;
-	cout << "neg size: " << buckets[1][var]->size() << endl;
-	if (buckets[0][var]->empty() && buckets[1][var]->empty()) return true;
-	//cout << "Non empty bucket var" << order[index].var << endl;
-
-    for (vector<Lit> *pos : *buckets[0][var]) {
-    	for (vector<Lit> *neg : *buckets[1][var]) {
-				vector<Lit> *resolvent = new vector<Lit>();
-				vector<Lit>::iterator p, n;
-				for (p=pos->begin(), n=neg->begin();  p != pos->end() && n != neg->end(); ) {
-					vector<Lit>::iterator x = *p < *n ? p : n;
-					//cout << iteration << endl;
-					if (x->var != var) {
-						if (p->var == n->var && p->sign != n->sign) break;
-							resolvent->push_back(*x);
-						}
-						if (p->var == n->var){
-							//cout << "p before; "<< (*p).var << endl;
-							//cout <<"n before: "<< (*n).var << endl;
-							*p++;
-							//cout <<"p after: "<< (*p).var << endl;
-							*n++;
-							//cout <<"n after: "<< (*n).var << endl;
-							//cout << "-----------------------------------------------------"<<endl;
-						}
-						else {
-							//cout << "p before; "<< (*p).var << endl;
-							//cout <<"n before: "<< (*n).var << endl;
-							if (*p < *n) *p++;
-							else *n++;
-							//cout <<"p after: "<< (*p).var << endl;
-							//cout <<"n after: "<< (*n).var << endl;
-							//cout << "-----------------------------------------------------"<<endl;
-						}
-				}
-				//cout << "breaking form for loop" <<endl;
-				if (p != pos->end() && n != neg->end()) {
-					//cout << "resolvent deleted" <<endl;
-					delete resolvent;
-				} else {
-					while (p != pos->end()) resolvent->push_back(*p++);
-					while (n != neg->end()) resolvent->push_back(*n++);
-
-					if (resolvent->empty()) return false;
-
-					Lit min = Lit::Parse(VAR_MAX);
-					for (Lit &l : *resolvent)  min = min < l ? min : l;
-
-					assert (min.var > var);
-
-					buckets[min.sign][min.var]->push_back(resolvent);
-				}
+      if(sylvan_set_isempty(buckets[i])) {
+        //cout<< "UNSAT"<< endl;
+        exit(1);
       }
-      delete pos;
-    }
 
-    for (vector<Lit> *neg : *buckets[1][var]) {
-			delete neg;
+        break;
+      }
     }
-	return true;
+  }
+  cout << "createBuckets is done" << endl;
 }
 
 
-bool DP(CNF *cnf, vector<Var> &order){
+bool DP(CNF *cnf, vector<Variable> order){
+  int n_workers = 1; // auto-detect
+  lace_init(n_workers, 0);
+  lace_startup(0, NULL, NULL);
+  LACE_ME;
 
-    //create and fill bucketsBDD
-    size_t numVars = cnf->variables.size() - 1;
-    vector<vector<vector<Lit> *> *> buckets[2];
-    buckets[0].resize(numVars + 1);
-    buckets[1].resize(numVars + 1);
-    for (Var v = 1; v <= numVars; v++) {
-        cout << "Mapping var "<< v <<" to "<< order[v] << endl;
-        buckets[0][v] = new vector<vector<Lit> *>();
-        buckets[1][v] = new vector<vector<Lit> *>();
+  // use at most 512 MB, nodes:cache ratio 2:1, initial size 1/32 of maximum
+  sylvan_set_limits(512*1024*1024, 1, 5);
+  sylvan_init_package();
+  sylvan_init_mtbdd();
+  /* ... do stuff ... */
+  //sylvan_gc_disable();
+
+  //create and fill buckets
+  int numVars = order.size();
+  vector<BDD> buckets(numVars);
+  createBuckets(cnf, numVars, order, buckets);
+
+  cout << "BDDs created." << endl;
+  /*
+  Now existentialy quantificatify the bucketBDDs, in order,
+  and put resolvent clauses in correct bucket.
+  */
+
+  for (int i = 0; i < numVars; i++){//loop over BDDs
+    cout << "i = " << i << endl;
+    if (buckets[i] == sylvan_true) continue;
+    if (buckets[i] == sylvan_false) {
+    	cout << "exit at " << i << endl;
+    	return false;
     }
-    createBucketsLit(cnf, order, buckets);
+   BDD varSet = mtbdd_set_empty();
+   varSet = mtbdd_set_add(varSet, order[i].var);
+   mtbdd_refs_pushptr(&varSet);
+   buckets[i] = sylvan_exists(buckets[i], varSet);
+   mtbdd_refs_popptr(1);
+   buckets[i+1] = sylvan_and(buckets[i+1], buckets[i]);
 
-    /*
-    Now existentialy quantificatify the bucketBDDs, in order,
-    and put resolvent clauses in correct bucket.
-    */
+  }
 
-    bool SAT = true;
-    for (Var v = 1; v <= numVars; v++){
+  return true;
+  sylvan_stats_report(stdout);
+  sylvan_quit();
+  lace_exit();
 
-        cout << "iteration: " << v << " variable: "<< v << endl;
 
-        SAT = exQuant(buckets, v);
-
-        if (!SAT) return false;
-    }
-
-    return SAT;
 }
+
+
+
