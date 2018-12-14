@@ -36,13 +36,14 @@ void createBuckets(CNF *cnf, int numVars, vector<Variable> order, vector<BDD> &b
       found = clause->findBucket(order[i].var);
       if (found) {
         BDD Cx = clause->makeBDD();//create BDD for clause
-
         mtbdd_refs_pushptr(&Cx);
-        cout << Cx << endl;
+
+        //cout << Cx << " wordt toegevoegd aan bucket " << i<<endl;
         //mtbdd_fprintdot_nc(stdout, buckets[i]);
         buckets[i] = sylvan_and(Cx, buckets[i]);
         mtbdd_refs_popptr(1);
-        cout << "bucket " << i << " : "<< buckets[i] << endl;
+
+        //cout << "bucket " << i << " : "<< buckets[i] << endl;
         //mtbdd_fprintdot_nc(stdout, buckets[i]);
 
       if(sylvan_set_isempty(buckets[i])) {
@@ -54,7 +55,7 @@ void createBuckets(CNF *cnf, int numVars, vector<Variable> order, vector<BDD> &b
       }
     }
   }
-  cout << "createBuckets is done" << endl;
+  //cout << "createBuckets is done" << endl;
 }
 
 
@@ -76,20 +77,20 @@ bool DP(CNF *cnf, vector<Variable> order){
   vector<BDD> buckets(numVars);
   createBuckets(cnf, numVars, order, buckets);
 
-  cout << "BDDs created." << endl;
+  //cout << "BDDs created." << endl;
   /*
   Now existentialy quantificatify the bucketBDDs, in order,
   and put resolvent clauses in correct bucket.
   */
 
   for (int i = 0; i < numVars; i++){//loop over BDDs
-  	cout << "i = " << i << endl;
+  	//cout << "i = " << i << endl;
     if (buckets[i] == sylvan_true) continue;
     if (buckets[i] == sylvan_false) {
-    	cout << "exit at " << i << endl;
+    	//cout << "exit at " << i << endl;
     	return false;
     }
-    cout << buckets[i]<< endl;
+    //cout << buckets[i]<< endl;
     BDD varSet = mtbdd_set_empty();
     varSet = mtbdd_set_add(varSet, order[i].var);
     mtbdd_refs_pushptr(&varSet);
@@ -98,7 +99,9 @@ bool DP(CNF *cnf, vector<Variable> order){
     buckets[i+1] = sylvan_and(buckets[i+1], buckets[i]);
 
   }
-
+  for (int i = 0; i < numVars; i++) {
+    sylvan_unprotect(&buckets[i]);
+  }
 
   sylvan_stats_report(stdout);
   sylvan_quit();
