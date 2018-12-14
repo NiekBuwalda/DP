@@ -25,9 +25,8 @@ vector<Lit> &Clause::getVec(){
 }
 
 bool Clause::findBucket(Var variable){
-  for (size_t i = 0; i < literals.size(); i++){
-    Lit *lit = &literals.at(i);
-    if (lit->var == variable){
+  for (Lit &lit : literals){
+    if (lit.var == variable){
     	return true;
     }
   }
@@ -49,7 +48,6 @@ BDD Clause::makeBDD(){
   LACE_ME;
   BDD Cx = sylvan_false;
   mtbdd_refs_pushptr(&Cx);
-  //sylvan_protect(&Cx);
   for(size_t i = 0; i < literals.size(); i++){//loop over literals
     Lit *lit = &literals.at(i);
     BDD result;
@@ -61,28 +59,15 @@ BDD Clause::makeBDD(){
     mtbdd_refs_pushptr(&result);
     //mtbdd_fprintdot_nc(stdout, result);
 
-    //BDD Cxp = Cx;
-    //cout << "hello" << endl;
-    //sylvan_unprotect(&Cxp);
-    //    cout << "hello" << endl;
-    //Cx = sylvan_or(Cxp, result);
-    //    cout << "there" << endl;
-    //sylvan_protect(&Cx);
-
     Cx = sylvan_or(Cx, result);
     mtbdd_refs_popptr(2);//result and Cx
     mtbdd_refs_pushptr(&Cx);
-
-    // HOE CX TE PROTECTEN EN DE OUDE CX NIET MEER
-
-
     //mtbdd_fprintdot_nc(stdout, Cx);
-    //free_var(result);
   }
-  mtbdd_fprintdot_nc(stdout, Cx);
+  //mtbdd_fprintdot_nc(stdout, Cx);
+  mtbdd_refs_popptr(1);//Cx
   return Cx;
-  //free_var(Cx);
-  mtbdd_refs_popptr(1);
+  //mtbdd_refs_popptr(1);
 
 }
 
