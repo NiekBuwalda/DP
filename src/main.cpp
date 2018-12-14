@@ -18,11 +18,20 @@ int main(int argc, const char *argv[]) {
     }
     CNF *cnf = parseFile(fileName);
     cnf->initClauses();
+    /*
     vector<Var> order(cnf->variables.size() + 1);
     int i = 1;
     for (vector<Variable *>::iterator v = ++cnf->variables.begin(); v != cnf->variables.end(); v++) {
         order[(*v)->var] = i++;
     }
+    */
+    vector<Variable> order;
+		for(Variable *variable: cnf->variables){
+			order.push_back(*variable);
+		}
+		order.erase(order.begin());
+		//cout << order.size() << endl;
+
     //cout << "Executing DP" << endl;
     //bool result = DPLL(cnf, 0, 0, True);
     bool result = DP(cnf, order);
