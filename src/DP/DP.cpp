@@ -39,11 +39,9 @@ void createBuckets(CNF *cnf, int numVars, vector<Variable> order, vector<BDD> &b
 
         mtbdd_refs_pushptr(&Cx);
         cout << Cx << endl;
-        //volgende regel bevat bus error
+        //mtbdd_fprintdot_nc(stdout, buckets[i]);
         buckets[i] = sylvan_and(Cx, buckets[i]);
-        cout<<"test 3" << endl;
         mtbdd_refs_popptr(1);
-        cout<<"test 4" << endl;
         cout << "bucket " << i << " : "<< buckets[i] << endl;
         //mtbdd_fprintdot_nc(stdout, buckets[i]);
 
@@ -85,26 +83,27 @@ bool DP(CNF *cnf, vector<Variable> order){
   */
 
   for (int i = 0; i < numVars; i++){//loop over BDDs
-    cout << "i = " << i << endl;
+  	cout << "i = " << i << endl;
     if (buckets[i] == sylvan_true) continue;
     if (buckets[i] == sylvan_false) {
     	cout << "exit at " << i << endl;
     	return false;
     }
-   BDD varSet = mtbdd_set_empty();
-   varSet = mtbdd_set_add(varSet, order[i].var);
-   mtbdd_refs_pushptr(&varSet);
-   buckets[i] = sylvan_exists(buckets[i], varSet);
-   mtbdd_refs_popptr(1);
-   buckets[i+1] = sylvan_and(buckets[i+1], buckets[i]);
+    cout << buckets[i]<< endl;
+    BDD varSet = mtbdd_set_empty();
+    varSet = mtbdd_set_add(varSet, order[i].var);
+    mtbdd_refs_pushptr(&varSet);
+    buckets[i] = sylvan_exists(buckets[i], varSet);
+    mtbdd_refs_popptr(1);
+    buckets[i+1] = sylvan_and(buckets[i+1], buckets[i]);
 
   }
 
-  return true;
+
   sylvan_stats_report(stdout);
   sylvan_quit();
   lace_exit();
-
+  return true;
 
 }
 
