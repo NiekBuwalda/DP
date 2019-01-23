@@ -20,312 +20,132 @@ extern "C"{
 using namespace std;
 using namespace sylvan;
 
+//static bool comp (int i,int j) { return (i<j); }
 
-/*
-Put all clauses in correct bucketsBDD as BDD
-*/
-/*
-void createBuckets(CNF *cnf, int numVars, vector<Variable> order, vector<vector<Clause>> &bucketsUnsigned, vector<vector<Clause>> &bucketsSigned){
-  bool litSign = false;
-  for(Clause *clause: cnf->clauses){
-    bool found = false;
-    for (int i = 0; i < numVars; i++) {
-      found = clause->findBucket2(order[i].var, litSign);
-      if (found) {
-    	  if(litSign){
-    		  bucketsSigned[i].push_back(*clause);
-    	  }
-    	  else bucketsUnsigned[i].push_back(*clause);
-        break;
-      }
-    }
-  }
-  cout << "createBuckets is done" << endl;
-}
-*/
-void createBucketsLit(CNF *cnf, int numVars, vector<Variable> order, vector<vector<vector<Lit>>> &bucketsUnsigned, vector<vector<vector<Lit>>> &bucketsSigned){
+
+/**
+ * CVreate buckets with clauses renumbered according to the new ordering
+ */
+void createBucketsLit(CNF *cnf, vector<Var> &order, vector<vector<vector<Lit> *> *> *buckets) {
 	bool litSign = false;
-	  for(Clause *clause: cnf->clauses){
-	  	vector<Lit> literals = clause->getVec();
-	  	bool found = false;
-	    for (int i = 0; i < numVars; i++) {
-	      found = clause->findBucket2(order[i].var, litSign);
-	      if (found) {
-	    	  if(litSign){
-	    		  bucketsSigned[i].push_back(literals);
-	    	  }
-	    	  else bucketsUnsigned[i].push_back(literals);
-	    	  //cout << bucketsSigned[i].size() << " ,"  << bucketsUnsigned[i].size() << endl;
-	    	  break;
-	      }
+    size_t numVars = cnf->variables.size() - 1;
+	for (Clause *clause : cnf->clauses) {
+        vector<Lit> *literals = &clause->getVec();
+        for (Var v = 1; v <= numVars; v++) {
+            Var var = order[v];
+            assert (var <= numVars);
 
-	    }
-	  }
-	  cout << "createBuckets is done" << endl;
+            bool found = clause->hasVariable(var, litSign);
+            if (!found) continue;
 
+            vector<Lit> *literals2 = new vector<Lit>();
+            for (Lit &l : *literals) {
+                Lit x;
+                x.l(order[l.var], l.sign);
+                literals2->push_back(x);
+            }
+            std::sort(literals2->begin(), literals2->end());
+
+            buckets[litSign][var]->push_back(literals2);
+            break;
+        }
+    }
+    //cout << "createBuckets is done" << endl;
 }
 
-
-bool cleanClause(vector<Lit> &clause, vector<Variable> order){
-	/*
-	//cout << "clause size: " << clause.size() << endl;
-	for (size_t l= 0; l < clause.size(); ++l){
-		Lit *lit = &clause.at(l);
-		cout << lit->var << lit->sign << ", ";
-	}
-	//cout << endl;
-	*/
-	for(uint32_t j = 0; j < order.size(); ++j){
-		Var var = order[j].var;
-		bool first = true;
-		bool firstSign;
-		for (size_t z = 0; z < clause.size(); ++z){
-			Lit *lit = &clause.at(z);
-			if (lit->var == var && first){
-				first = false;
-				if (lit->sign) firstSign = true;
-				else firstSign = false;
-			}
-			else if (lit->var == var && !first){
-				if (firstSign && lit->sign) {
-					clause.erase(clause.begin()+z);
-					//cout << "case 1" << endl;
-				}
-				else if (firstSign && !lit->sign){
-					//cout << "case 2" << endl;
-					return true;
-				}
-				else if (!firstSign && lit->sign){
-					//cout << "case 3" << endl;
-					return true;
-				}
-				else if (!firstSign && !lit->sign){
-					clause.erase(clause.begin()+z);
-					//cout << "case 4" << endl;
-				}
-			}
-		}
-	}
-	return false;
-}
-
-
-
-bool exQuant(vector<vector<vector<Lit>>> &bucketsUnsigned, vector<vector<vector<Lit>>> &bucketsSigned, vector<Variable> order, int index, int numVars){
-
-	vector<vector<Lit>> pos = bucketsUnsigned[index];//bucketi+
-	vector<vector<Lit>> neg = bucketsSigned[index];//bucketi-
-	cout << "pos size: " << pos.size() << endl;
-	cout << "neg size: " << neg.size() << endl;
-	//simplify clauses
-	/*
-	for (unsigned i = 0; i < pos.size(); ++i){
-		vector<Lit> clause = pos.at(i);
-		cout << "clause size: " << clause.size() << endl;
-		for (size_t l= 0; l < clause.size(); ++l){
-			Lit *lit = &clause.at(l);
-			cout << lit->var << lit->sign << ", ";
-		}
-		cout << endl;
-		for(uint32_t j = 0; j < order.size(); ++j){
-			Var var = order[j].var;
-			bool first = true;
-			bool firstSign;
-			for (size_t z = 0; z < clause.size(); ++z){
-				Lit *lit = &clause.at(z);
-				if (lit->var == var && first){
-					first = false;
-					if (lit->sign) firstSign = true;
-					else firstSign = false;
-					continue;
-				}
-				if (lit->var == var && !first){
-					if (firstSign && lit->sign) {
-						clause.erase(clause.begin()+z);
-						cout << "case 1" << endl;
-					}
-					else if (firstSign && !lit->sign){
-						cout << "case 2" << endl;
-						return false;
-					}
-					else if (!firstSign && lit->sign){
-						cout << "case 3" << endl;
-						return false;
-					}
-					else if (!firstSign && !lit->sign){
-						clause.erase(clause.begin()+z);
-						cout << "case 4" << endl;
-					}
-				}
-			}
-		}
-
-	}
-	for (unsigned i = 0; i < neg.size(); ++i){
-		vector<Lit> clause = neg.at(i);
-		cout << "clause size: " << clause.size() << endl;
-		for (size_t l= 0; l < clause.size(); ++l){
-			Lit *lit = &clause.at(l);
-			cout << lit->var << lit->sign << ", ";
-		}
-		cout << endl;
-		for(uint32_t j = 0; j < order.size(); ++j){
-			Var var = order[j].var;
-			bool first = true;
-			bool firstSign;
-			for (size_t z = 0; z < clause.size(); ++z){
-				Lit *lit = &clause.at(z);
-				if (lit->var == var && first){
-					first = false;
-					if (lit->sign) firstSign = true;
-					else firstSign = false;
-					continue;
-				}
-				if (lit->var == var && !first){
-					if (firstSign && lit->sign) {
-						clause.erase(clause.begin()+z);
-						cout << "case 1" << endl;
-					}
-					else if (firstSign && !lit->sign){
-						cout << "case 2" << endl;
-						return false;
-					}
-					else if (!firstSign && lit->sign){
-						cout << "case 3" << endl;
-						return false;
-					}
-					else if (!firstSign && !lit->sign){
-						clause.erase(clause.begin()+z);
-						cout << "case 4" << endl;
-					}
-				}
-			}
-		}
-
-	}
-*/
-	if (!(pos.empty() && neg.empty())){
+bool exQuant(vector<vector<vector<Lit> *> *> *buckets, size_t var)
+{
+	//cout << "pos size: " << buckets[0][var]->size() << endl;
+	//cout << "neg size: " << buckets[1][var]->size() << endl;
+	if (buckets[0][var]->empty() && buckets[1][var]->empty()) return true;
 	//cout << "Non empty bucket var" << order[index].var << endl;
 
-		for (unsigned i = 0; i < pos.size(); ++i){
-			vector<Lit> resUnsigned = pos.at(i);
-			if (resUnsigned.empty()) return false;
-			int nextIndexPos = numVars;
-			bool nextSignPos = false;
-			for (size_t j=0; j < resUnsigned.size(); ++j ){
-				Lit *lit = &resUnsigned.at(j);
-				if(lit->var == index+1){
-					resUnsigned.erase(resUnsigned.begin()+j);
-				}
-				//check index in order for next bucket?
-				for (int x = 0; x < nextIndexPos; ++x){
-					if (order[x].var == lit->var && lit->var != index+1){
-						nextIndexPos = x;
-						if (lit->sign){
-							nextSignPos = true;
+    for (vector<Lit> *pos : *buckets[0][var]) {
+    	for (vector<Lit> *neg : *buckets[1][var]) {
+				vector<Lit> *resolvent = new vector<Lit>();
+				vector<Lit>::iterator p, n;
+				for (p=pos->begin(), n=neg->begin();  p != pos->end() && n != neg->end(); ) {
+					vector<Lit>::iterator x = *p < *n ? p : n;
+					//cout << iteration << endl;
+					if (x->var != var) {
+						if (p->var == n->var && p->sign != n->sign) break;
+							resolvent->push_back(*x);
 						}
-					}
-				}
-			}
-			for(unsigned k = 0; k < neg.size(); ++k ){
-				vector<Lit> resSigned = neg.at(k);
-				if (resUnsigned.empty()) return false;
-				int nextIndexNeg = numVars;
-				bool nextSignNeg = false;
-				for (size_t l = 0; l < resSigned.size(); ++l){
-					Lit *lit = &resSigned.at(l);
-					if(lit->var == index+1){
-						resSigned.erase(resSigned.begin()+l);
-					}
-					//check index in order for next bucket?
-					for (int x = 0; x < nextIndexNeg; ++x){
-						if (order[x].var == lit->var && lit->var != index+1){
-							nextIndexNeg = x;
-							if (lit->sign){
-								nextSignNeg = true;
-							}
+						if (p->var == n->var){
+							//cout << "p before; "<< (*p).var << endl;
+							//cout <<"n before: "<< (*n).var << endl;
+							*p++;
+							//cout <<"p after: "<< (*p).var << endl;
+							*n++;
+							//cout <<"n after: "<< (*n).var << endl;
+							//cout << "-----------------------------------------------------"<<endl;
 						}
-					}
+						else {
+							//cout << "p before; "<< (*p).var << endl;
+							//cout <<"n before: "<< (*n).var << endl;
+							if (*p < *n) *p++;
+							else *n++;
+							//cout <<"p after: "<< (*p).var << endl;
+							//cout <<"n after: "<< (*n).var << endl;
+							//cout << "-----------------------------------------------------"<<endl;
+						}
 				}
-				vector<Lit> res = resUnsigned;
-				res.insert( res.end(), resSigned.begin(), resSigned.end() );
-				//cout << "resSize: " << res.size() << endl;
-				bool result = cleanClause(res, order);
-				if (result) continue; //clause is true, no resolvent
-				bool nextSign;
-				int nextIndex;
-				if (nextIndexPos <= nextIndexNeg){
-					nextIndex = nextIndexPos;
-					nextSign = nextSignPos;
-				}
-				else {
-					nextIndex = nextIndexNeg;
-					nextSign = nextSignNeg;
-				}
-				//cout << "nextIndex: " << nextIndex << ", sign: " << nextSign << endl;
-				if (nextSign){
-					bucketsSigned[nextIndex].insert(bucketsSigned[nextIndex].end(), res);
-				}
-				else bucketsUnsigned[nextIndex].insert(bucketsUnsigned[nextIndex].end(), res);
+				//cout << "breaking form for loop" <<endl;
+				if (p != pos->end() && n != neg->end()) {
+					//cout << "resolvent deleted" <<endl;
+					delete resolvent;
+				} else {
+					while (p != pos->end()) resolvent->push_back(*p++);
+					while (n != neg->end()) resolvent->push_back(*n++);
 
-			}
-		}
-	}
+					if (resolvent->empty()) return false;
+
+					Lit min = Lit::Parse(VAR_MAX);
+					for (Lit &l : *resolvent)  min = min < l ? min : l;
+
+					assert (min.var > var);
+
+					buckets[min.sign][min.var]->push_back(resolvent);
+				}
+      }
+      delete pos;
+    }
+
+    for (vector<Lit> *neg : *buckets[1][var]) {
+			delete neg;
+    }
 	return true;
-	/*
-	for(it = pos.begin(); it != pos.end(); ++it){
-		vector<Lit> resUnsigned = pos.at(it);
-		for(it2 = neg.begin(); it != neg.end(); ++it2){
-			vector<Lit> resolvent;//new vector for new clause
-			vector<Lit> resSigned = neg.at(it2);
-			resolvent.insert(resolvent.end(), resUnsigned.begin(), resUnsigned.end());// insert B+ part of new clause
-			resolvent.insert(resolvent.end(), resSigned.begin(), resSigned.end());// insert B- part of new clause
-			for (vector<Lit>::iterator it=resolvent.begin(); it!=resolvent.end();) {
-
-			}
-			//place resolvent in correct bucket
-			for (int k=index+1; k < numVars; k++) {
-				Var next = order[k].var;
-				for (size_t l = 0; l < resolvent.size(); l++){
-			    Lit *lit = &resolvent.at(l);
-			    if (lit->var == next){
-			    	if(lit->sign){
-			    		bucketsSigned[l].insert(bucketsSigned[l].end(), resolvent.begin(), resolvent.end());
-			    	}
-			    	else bucketsUnsigned[l].insert(bucketsUnsigned[l].end(), resolvent.begin(), resolvent.end());
-			    	break;
-			    }
-			  }
-			}
-			//new bucket found
-		}
-	}
-	*/
 }
 
-bool DP(CNF *cnf, vector<Variable> order){
-  //create and fill bucketsBDD
-  int numVars = order.size();
-  bool SAT = true;
-  //vector<vector<Clause>> bucketsUnsigned(numVars);
-  //vector<vector<Clause>> bucketsSigned(numVars);
-  vector<vector<vector<Lit>>> bucketsUnsigned(numVars);
-  vector<vector<vector<Lit>>> bucketsSigned(numVars);
-  createBucketsLit(cnf, numVars, order, bucketsUnsigned, bucketsSigned);
 
-  /*
-  Now existentialy quantificatify the bucketBDDs, in order,
-  and put resolvent clauses in correct bucket.
-  */
+bool DPlits(CNF *cnf, vector<Var> &order){
 
-  for (int i = 0; i < numVars; i++){
-  	cout << "iteration: " << i << endl;
-  	SAT = exQuant(bucketsUnsigned, bucketsSigned, order, i, numVars);
-  	if (!SAT) return false;
-  }
+    //create and fill bucketsBDD
+    size_t numVars = cnf->variables.size() - 1;
+    vector<vector<vector<Lit> *> *> buckets[2];
+    buckets[0].resize(numVars + 1);
+    buckets[1].resize(numVars + 1);
+    for (Var v = 1; v <= numVars; v++) {
+        //cout << "Mapping var "<< v <<" to "<< order[v] << endl;
+        buckets[0][v] = new vector<vector<Lit> *>();
+        buckets[1][v] = new vector<vector<Lit> *>();
+    }
+    createBucketsLit(cnf, order, buckets);
 
-  return SAT;
+    /*
+    Now existentialy quantificatify the bucketBDDs, in order,
+    and put resolvent clauses in correct bucket.
+    */
+
+    bool SAT = true;
+    for (Var v = 1; v <= numVars; v++){
+
+        //cout << "iteration: " << v << " variable: "<< v << endl;
+
+        SAT = exQuant(buckets, v);
+
+        if (!SAT) return false;
+    }
+
+    return SAT;
 }
-  
-
-
