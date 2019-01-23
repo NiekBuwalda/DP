@@ -29,17 +29,25 @@ void createBuckets(CNF *cnf, int numVars, vector<Variable> order, vector<BDD> &b
     buckets[i] = sylvan_true;
     sylvan_protect(&buckets[i]);
   }
-
+  int teller = 0;
   for(Clause *clause: cnf->clauses){
+  	teller++;
     bool found = false;
     for (int i = 0; i < numVars; i++) {
       found = clause->findBucket(order[i].var);
       if (found) {
         BDD Cx = clause->makeBDD();//create BDD for clause
         mtbdd_refs_pushptr(&Cx);
-
-        //cout << Cx << " wordt toegevoegd aan bucket " << i<<endl;
-        //mtbdd_fprintdot_nc(stdout, buckets[i]);
+        /*
+      	if (i == 28){
+      		cout << "28 op " <<teller <<endl;
+      		vector<Lit> temp = clause->getVec();
+      		for (Lit &lit : temp){
+      			cout << lit.var;
+      		}
+      		cout <<endl;
+      	}
+        */
         buckets[i] = sylvan_and(Cx, buckets[i]);
         mtbdd_refs_popptr(1);
 
@@ -55,6 +63,8 @@ void createBuckets(CNF *cnf, int numVars, vector<Variable> order, vector<BDD> &b
       }
     }
   }
+  //cout << "bucket 28 =" <<endl;
+  //mtbdd_fprintdot_nc(stdout, buckets[28]);
   //cout << "createBuckets is done" << endl;
 }
 
@@ -66,7 +76,8 @@ bool DP(CNF *cnf, vector<Variable> order){
   LACE_ME;
 
   // use at most 512 MB, nodes:cache ratio 2:1, initial size 1/32 of maximum
-  sylvan_set_limits(512*1024*1024, 1, 5);
+  //sylvan_set_limits(512*1024*1024, 2, 5);
+  sylvan_set_limits(8ULL*1024*1024*1024, 2, 5);
   sylvan_init_package();
   sylvan_init_mtbdd();
   /* ... do stuff ... */
@@ -90,25 +101,26 @@ bool DP(CNF *cnf, vector<Variable> order){
     	//cout << "exit at " << i << endl;
     	return false;
     }
-    //cout << buckets[i]<< endl;
+    //cout <<"i: " << buckets[i]<< endl;
+    //mtbdd_fprintdot_nc(stdout, buckets[i]);
     BDD varSet = mtbdd_set_empty();
     varSet = mtbdd_set_add(varSet, order[i].var);
     mtbdd_refs_pushptr(&varSet);
     buckets[i] = sylvan_exists(buckets[i], varSet);
     mtbdd_refs_popptr(1);
     buckets[i+1] = sylvan_and(buckets[i+1], buckets[i]);
-
-  }
+    sylvan_unprotect(&buckets[i]);
+ }
+  /*
   for (int i = 0; i < numVars; i++) {
     sylvan_unprotect(&buckets[i]);
   }
-
+	*/
   sylvan_stats_report(stdout);
   sylvan_quit();
   lace_exit();
   return true;
 
 }
-
 
 
