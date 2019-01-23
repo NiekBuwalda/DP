@@ -6,6 +6,7 @@
 #include <iostream>
 #include <typeinfo>
 #include <deque>
+
 #include <array>
 extern "C"{
   #include "sylvan.h"
@@ -14,7 +15,7 @@ extern "C"{
 #include "structures/Clause.h"
 #include "structures/CNF.h"
 #include "structures/Variable.h"
-#include "DP/DP.h"
+#include "DP/DPBDD.h"
 
 using namespace std;
 using namespace sylvan;
@@ -22,7 +23,7 @@ using namespace sylvan;
 /*
 Put all clauses in correct buckets as BDD
 */
-void createBuckets(CNF *cnf, int numVars, vector<Variable> order, vector<BDD> &buckets){
+void createBucketsBDD(CNF *cnf, int numVars, vector<Variable> order, vector<BDD> &buckets){
   LACE_ME;
 
   for (int i = 0; i < numVars; i++) {
@@ -50,18 +51,18 @@ void createBuckets(CNF *cnf, int numVars, vector<Variable> order, vector<BDD> &b
       }
     }
   }
-  cout << "createBuckets is done" << endl;
+  //cout << "createBuckets is done" << endl;
 }
 
 
-bool DP(CNF *cnf, vector<Variable> order){
+bool DPBDD(CNF *cnf, vector<Variable> order){
   int n_workers = 1; // auto-detect
   lace_init(n_workers, 0);
   lace_startup(0, NULL, NULL);
   LACE_ME;
 
   // use at most 512 MB, nodes:cache ratio 2:1, initial size 1/32 of maximum
-  sylvan_set_limits(512*1024*1024, 1, 5);
+  sylvan_set_limits(8ULL*1024*1024*1024, 2, 5);
   sylvan_init_package();
   sylvan_init_mtbdd();
   /* ... do stuff ... */
@@ -70,47 +71,44 @@ bool DP(CNF *cnf, vector<Variable> order){
   //create and fill buckets
   int numVars = order.size();
   vector<BDD> buckets(numVars);
-  createBuckets(cnf, numVars, order, buckets);
+  createBucketsBDD(cnf, numVars, order, buckets);
 
-  cout << "BDDs created." << endl;
+  //cout << "BDDs created." << endl;
   /*
   Now existentialy quantificatify the bucketBDDs, in order,
   and put resolvent clauses in correct bucket.
   */
 
   for (int i = 0; i < numVars; i++){//loop over BDDs
-    cout << "i = " << i << endl;
+    //cout << "i = " << i << endl;
     if (buckets[i] == sylvan_true) continue;
     if (buckets[i] == sylvan_false) return false;
 
-    cout << "Non empty bucket. "<< i << ", " <<buckets[i] <<endl;
+    //cout << "Non empty bucket. "<< i << ", " <<buckets[i] <<endl;
     BDD varSet = mtbdd_set_empty();
     varSet = mtbdd_set_add(varSet, order[i].var);
     mtbdd_refs_pushptr(&varSet);
     BDD Z = sylvan_exists(buckets[i], varSet);
     mtbdd_refs_popptr(1);
     mtbdd_refs_pushptr(&Z);
-    cout << "Z = " << Z << endl;
+    //cout << "Z = " << Z << endl;
     for (int j = i+1; j < numVars; j++){
       Var var = mtbdd_getvar(Z);
-      cout << "var = " << var << endl;
+      //cout << "var = " << var << endl;
       if (var == 0) break;
-      cout << "j = "<< j << " , order = " << order[j].var << endl;
+      //cout << "j = "<< j << " , order = " << order[j].var << endl;
       if (order[j].var == var){
-    	BDD varSet = mtbdd_set_empty();
+      	BDD varSet = mtbdd_set_empty();
         varSet = mtbdd_set_add(varSet, var);
         mtbdd_refs_pushptr(&varSet);
         BDD R = sylvan_exists(Z, varSet);
         mtbdd_refs_popptr(1);
         mtbdd_refs_pushptr(&R);
-        cout << "R = " << R << endl;
+        //cout << "R = " << R << endl;
         BDD resolvent = sylvan_constrain(Z, R);
         mtbdd_refs_pushptr(&resolvent);
-        cout << "resolvent = " << resolvent << endl;
+        //cout << "resolvent = " << resolvent << endl;
         //mtbdd_fprintdot(stdout, resolvent);
-        if(j == 17){
-        	cout << buckets[j] << ", " <<resolvent << endl;
-        }
         buckets[j] = sylvan_and(buckets[j], resolvent);
 
         mtbdd_refs_popptr(1);//resolvent
